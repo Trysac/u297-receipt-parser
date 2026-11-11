@@ -9,4 +9,5 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Added `receipt_parser` with rule-based OCR receipt parsing, Decimal amount handling, OCR fixes, consistency checks, and CLI.
 - Initial project structure from the factory utility template.

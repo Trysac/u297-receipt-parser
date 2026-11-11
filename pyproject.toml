@@ -19,6 +19,9 @@ classifiers = [
 ]
 dependencies = []
 
+[project.scripts]
+receipt-parser = "receipt_parser.__main__:main"
+
 [project.urls]
 Homepage = "https://github.com/Trysac/u297-receipt-parser"
 Source = "https://github.com/Trysac/u297-receipt-parser"

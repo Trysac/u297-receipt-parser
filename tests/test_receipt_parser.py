@@ -2,22 +2,36 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 
 import receipt_parser
 
 
-def test_normalize_trims_and_lowercases() -> None:
-    assert receipt_parser.normalize("  Hello World ") == "hello world"
+def test_public_names_are_exported() -> None:
+    for name in (
+        "LineItem",
+        "Receipt",
+        "ReceiptError",
+        "parse_amount",
+        "parse_receipt",
+        "to_json",
+    ):
+        assert hasattr(receipt_parser, name)
 
 
-@pytest.mark.parametrize("value", ["", "   ", "\t\n"])
-def test_normalize_rejects_blank_input(value: str) -> None:
-    with pytest.raises(ValueError, match="must not be empty"):
-        receipt_parser.normalize(value)
+def test_parse_amount_round_trip() -> None:
+    assert receipt_parser.parse_amount("12,50") == Decimal("12.50")
 
 
-def test_version_is_semver() -> None:
-    parts = receipt_parser.__version__.split(".")
-    assert len(parts) == 3
-    assert all(part.isdigit() for part in parts)
+def test_parse_amount_rejects_bad_input() -> None:
+    with pytest.raises(receipt_parser.ReceiptError) as excinfo:
+        receipt_parser.parse_amount("3.5")
+    assert excinfo.value.code == "invalid_amount"
+
+
+def test_error_message_is_short() -> None:
+    err = receipt_parser.ReceiptError("invalid_amount")
+    assert err.code == "invalid_amount"
+    assert len(str(err)) <= 200
