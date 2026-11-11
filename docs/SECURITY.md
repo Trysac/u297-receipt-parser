@@ -2,21 +2,24 @@
 
 ## Threat model
 
-`trysac-receipt-parser` is a pure library without I/O. The main risks are:
+`trysac-receipt-parser` is a pure Python library. The public functions do not perform network or filesystem I/O. The CLI reads one text path or stdin and prints JSON.
 
-- **Supply chain**: a compromised dependency or CI action. Mitigation: no runtime dependencies,
-  Dependabot weekly updates, actions pinned to major versions, minimal workflow permissions.
-- **Leaked secrets**: tokens committed by mistake. Mitigation: `gitleaks` runs in the local gates
-  and in CI; `.env` files are git-ignored.
-- **Insecure code**: shell injection, weak hashes, unsafe deserialization. Mitigation: Ruff's
-  `S` rules in lint and a `security` gate (Bandit, high severity fails, `# nosec` ignored); fix the
-  code instead of silencing it.
-- **Untrusted input**: callers may pass hostile strings. Mitigation: validate input and fail with
-  explicit exceptions; never `eval`, `exec` or deserialize untrusted data.
+### Defended
+
+- Oversized input: `parse_receipt` rejects text longer than `max_chars` (default `100_000`) with `ReceiptError('input_too_large')` before parsing.
+- Too many item lines: `parse_receipt` rejects more than `max_items` (default `500`) item lines with `ReceiptError('too_many_items')`.
+- Numeric parsing: amounts are parsed into `Decimal` values. The grammar requires exactly two decimal digits and validates thousands groups. `parse_amount` raises `ReceiptError('invalid_amount')` instead of using binary floats.
+- Error messages: `ReceiptError` messages are fixed strings and do not include receipt text.
+- Untrusted text: the parser uses regular expressions, string operations, and `Decimal`; it does not call `eval`, `exec`, or deserialize untrusted data.
+- Logging: the module logger has a `NullHandler` and does not emit receipt contents by default.
+
+### Not defended
+
+- Incorrect OCR text: the parser cannot know whether the merchant, date, or item descriptions are correct. It reports only the consistency issues listed in the code: `subtotal_mismatch`, `total_mismatch`, `missing_total`, `invalid_date`, `item_mismatch`, and `ocr_fixed`.
+- Adversarial text within the limits: `max_chars` bounds total input length, but `_find_amount` tries suffixes of each line, so a single long line can still take time proportional to the square of its length.
+- Authentication or authorization: the library and CLI do not authenticate users or restrict which files the CLI process can read.
+- Secrets: the library does not read environment variables, credentials, or secret stores.
 
 ## Publishing
 
-Releases are published to PyPI with trusted publishing (OIDC) when available, never with a
-long-lived token stored in the repository.
-
-To report a vulnerability, see [SECURITY.md](../SECURITY.md).
+No release or publishing scripts are present in the repository. The library code does not publish itself.

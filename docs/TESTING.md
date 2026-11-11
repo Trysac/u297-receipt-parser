@@ -3,27 +3,19 @@
 ## Running
 
 ```sh
-uv run pytest --cov=receipt_parser   # tests with coverage report
-uv run python scripts/check.py      # every gate, as CI and the factory run it
+uv run pytest
 ```
 
 ## Policy
 
-- Branch coverage of `src/receipt_parser` must stay at or above 80 %; the gate fails below it.
-- Tests exercise the public API (`import receipt_parser`) and assert every observable effect:
-  return values, raised exceptions and their messages.
-- Each bug fix starts with a failing test that reproduces it.
-- Tests are deterministic: no network, no wall clock, no dependence on test order.
+The tests use pytest and synthetic receipt text only. They do not require network access. CLI tests call `receipt_parser.__main__.main` in-process, replace `sys.stdin` when needed, and capture stdout with `contextlib.redirect_stdout`. File tests use pytest's `tmp_path`.
 
 ## Tiers
 
-- Local tier (every gate run, coverage measured here): unit and property tests, plus conformance on small
-  fixtures kept in the repository.
-- CI tier: conformance that needs an external tool or a download. Mark them `@pytest.mark.conformance`; `scripts/check.py` deselects them locally
-  (unless `FABRICA_CI=1`). The CI `conformance` job sets `FABRICA_CI=1` and runs the full suite. Tools are installed
-  by the optional `ci/conformance-setup.sh` (bash, CI only; verify every download against a pinned SHA-256), and
-  tagged tests skip cleanly when their tool is missing.
+There is one pytest suite. No separate conformance tier, marker, or external-tool setup is present in the test files.
 
 ## Layout
 
-`tests/test_<module>.py` mirrors each public module. Shared fixtures go in `tests/conftest.py`.
+- `tests/test_amount.py` covers `parse_amount`: valid amounts with `.`, `,`, space, and apostrophe thousands separators; negative values; invalid decimal precision; invalid group sizes; currency symbols rejected; empty and whitespace input.
+- `tests/test_cli.py` covers `main`: file input, stdin input (`-`), `--strict` with and without issues, missing file, invalid amount exit code, and `--month-first`.
+- `tests/test_json.py` covers `to_json`: all fields, sorted keys, amounts as strings, date as ISO 8601 or null, and null optional values.
